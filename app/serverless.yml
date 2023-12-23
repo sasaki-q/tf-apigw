@@ -1,0 +1,74 @@
+service: app
+
+custom:
+  serverless-offline:
+    useDocker: true
+  dynamodb:
+    stages:
+      - dev
+    start:
+      docker: true
+      port: 8000
+      inMemory: true
+      migrate: true
+      seed: true
+      convertEmptyValues: true
+
+plugins:
+  - serverless-offline
+  - serverless-dynamodb-local
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: go1.x
+  timeout: 30
+  stage: dev
+  region: ap-northeast-1
+
+
+package:
+  patterns:
+    - '!./**'
+    - ./bin/**
+
+functions:
+  hc:
+    handler: bin/hc
+    events:
+      - httpApi:
+          path: /hc
+          method: get
+  create_message:
+    handler: bin/message/create
+    events:
+      - httpApi:
+          path: /message
+          method: post
+  list_message:
+    handler: bin/message/list
+    events:
+      - httpApi:
+          path: /message
+          method: get
+	
+resources:
+  Resources:
+    MessageTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: messages
+        AttributeDefinitions:
+          - AttributeName: user_id
+            AttributeType: S
+          - AttributeName: created_at
+            AttributeType: S
+        KeySchema:
+          - AttributeName: user_id
+            KeyType: HASH
+          - AttributeName: created_at
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1

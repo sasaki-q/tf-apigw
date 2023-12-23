@@ -1,0 +1,5 @@
+app/.serverless
+app/bin
+app/node_modules
+infra/provider.tf
+infra/.terraform*
