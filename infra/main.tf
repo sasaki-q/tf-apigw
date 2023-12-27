@@ -38,18 +38,15 @@ module "private_subnet" {
 ################################################
 # dynamodb
 ################################################
+
 module "dynamodb" {
   source = "./resources/dynamodb"
 
-  table_name = "messages"
-  hash_key = {
-    name = "user_id"
-    type = "N"
-  }
-  range_key = {
-    name = "created_at"
-    type = "S"
-  }
+  for_each = { for idx, val in var.dynamodb_tables : idx => val }
+
+  table_name = each.value.name
+  hash_key   = each.value.hash_key
+  range_key  = each.value.range_key
 }
 
 ################################################
@@ -93,7 +90,7 @@ module "lambda_policy" {
 
   actions   = ["dynamodb:*"]
   name      = "lambda_dynamodb_policy"
-  resources = ["arn:aws:dynamodb:ap-northeast-1:*:table/${module.dynamodb.table_name}"]
+  resources = [for v in module.dynamodb : "arn:aws:dynamodb:ap-northeast-1:*:table/${v.table_name}"]
 }
 
 module "lambda_assume_role_attachment" {

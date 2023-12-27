@@ -65,6 +65,35 @@ variable "private_subnets" {
   ]
 }
 
+variable "dynamodb_tables" {
+  type = list(object({
+    name = string
+    hash_key = object({
+      name = string
+      type = string
+    })
+    range_key = object({
+      name = string
+      type = string
+    })
+  }))
+
+  default = [
+    {
+      name = "messages"
+      hash_key = {
+        name = "user_id"
+        type = "N"
+      }
+      range_key = {
+        name = "created_at"
+        type = "S"
+      }
+
+    }
+  ]
+}
+
 variable "env" {
   type    = string
   default = "staging"
