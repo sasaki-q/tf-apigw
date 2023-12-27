@@ -5,3 +5,6 @@ app/dynamodb
 
 infra/provider.tf
 infra/.terraform*
+infra/*tfstate*
+infra/resources/lambda/bin/*
+*.DS_Store
