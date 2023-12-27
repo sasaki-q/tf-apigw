@@ -4,4 +4,8 @@ resource "aws_lambda_function" "main" {
   handler       = var.handler
   role          = var.role_arn
   runtime       = var.runtime
+
+  environment {
+    variables = var.environment
+  }
 }

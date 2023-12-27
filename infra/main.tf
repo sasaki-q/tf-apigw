@@ -1,5 +1,7 @@
+data "aws_caller_identity" "current" {}
+
 ################################################
-# Network
+# network
 ################################################
 
 module "vpc" {
@@ -31,6 +33,23 @@ module "private_subnet" {
   name           = each.value.name
   az             = each.value.az
   route_table_id = module.vpc.private_route_table_id
+}
+
+################################################
+# dynamodb
+################################################
+module "dynamodb" {
+  source = "./resources/dynamodb"
+
+  table_name = "messages"
+  hash_key = {
+    name = "user_id"
+    type = "N"
+  }
+  range_key = {
+    name = "created_at"
+    type = "S"
+  }
 }
 
 ################################################
@@ -72,8 +91,9 @@ module "lambda_assume_role" {
 module "lambda_policy" {
   source = "./resources/iam/policy"
 
-  actions = ["dynamodb:*"]
-  name    = "lambda_dynamodb_policy"
+  actions   = ["dynamodb:*"]
+  name      = "lambda_dynamodb_policy"
+  resources = ["arn:aws:dynamodb:ap-northeast-1:*:table/${module.dynamodb.table_name}"]
 }
 
 module "lambda_assume_role_attachment" {
@@ -93,6 +113,16 @@ module "lambda" {
   role_arn  = module.lambda_assume_role.arn
   handler   = each.value.handler
   file_path = each.value.file_path
+
+  environment = each.value.use_dynamo ? {
+    ENV           = var.env
+    DYNAMO_REGION = "ap-northeast-1"
+    DYNAMO_HOST   = "https://dynamodb.ap-northeast-1.amazonaws.com"
+    } : {
+    ENV = var.env
+  }
+
+  depends_on = [module.dynamodb]
 }
 
 ################################################
@@ -108,8 +138,21 @@ module "integration" {
   api_gw_id              = module.api_gateway.id
   api_gw_root_id         = module.api_gateway.root_resource_id
   http_method            = each.value.http_method
-  lambda_invoke_arn      = module.lambda[0].invoke_arn
+  lambda_invoke_arn      = module.lambda[index(var.api_gw_methods, each.value)].invoke_arn
   api_gw_assume_role_arn = module.api_gateway_assume_role.arn
 
   depends_on = [module.lambda, module.api_gateway]
+}
+
+################################################
+# api gateway deploymnet
+################################################
+module "deployment" {
+  source = "./resources/api_gateway/deployment"
+
+  api_gw_id  = module.api_gateway.id
+  body       = module.api_gateway.body
+  stage_name = var.env
+
+  depends_on = [module.integration]
 }

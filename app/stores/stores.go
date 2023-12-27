@@ -18,7 +18,6 @@ type Stores struct {
 func NewStore() (*Stores, error) {
 	cfg, err := config.LoadDefaultConfig(
 		context.TODO(),
-		config.WithRegion(fmt.Sprintf("%s", os.Getenv("DYNAMO_REGION"))),
 		config.WithEndpointResolver(aws.EndpointResolverFunc(
 			func(service, region string) (aws.Endpoint, error) {
 				return aws.Endpoint{
@@ -34,17 +33,27 @@ func NewStore() (*Stores, error) {
 		return nil, err
 	}
 
-	client := dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
-		o.Credentials = credentials.NewStaticCredentialsProvider(
-			fmt.Sprintf("%s", os.Getenv("AWS_ACCESS_KEY_ID")),
-			fmt.Sprintf("%s", os.Getenv("AWS_SECRET_ACCESS_KEY")),
-			"",
-		)
-	})
+	if os.Getenv("ENV") == "dev" {
+		client := dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
+			o.Credentials = credentials.NewStaticCredentialsProvider(
+				fmt.Sprintf("%s", os.Getenv("AWS_ACCESS_KEY_ID")),
+				fmt.Sprintf("%s", os.Getenv("AWS_SECRET_ACCESS_KEY")),
+				"",
+			)
+		})
 
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
+
+		return &Stores{MessageStore: MessageStore{Client: client}}, nil
+	} else {
+		client := dynamodb.NewFromConfig(cfg)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &Stores{MessageStore: MessageStore{Client: client}}, nil
 	}
-
-	return &Stores{MessageStore: MessageStore{Client: client}}, nil
 }

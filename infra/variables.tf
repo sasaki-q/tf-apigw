@@ -65,6 +65,11 @@ variable "private_subnets" {
   ]
 }
 
+variable "env" {
+  type    = string
+  default = "staging"
+}
+
 variable "api_gw_assume_role_name" {
   type    = string
   default = "api_gw_assume_role"
@@ -77,16 +82,30 @@ variable "lambda_assume_role_name" {
 
 variable "lambda" {
   type = list(object({
-    name      = string
-    handler   = string
-    file_path = string
+    name       = string
+    handler    = string
+    file_path  = string
+    use_dynamo = bool
   }))
 
   default = [
     {
-      name      = "healthCheckHandler"
-      handler   = "app/bin/hc"
-      file_path = "./resources/lambda/bin/hc.zip"
+      name       = "healthCheckHandler"
+      handler    = "app/bin/hc"
+      file_path  = "./resources/lambda/bin/hc.zip"
+      use_dynamo = false
+    },
+    {
+      name       = "listMessageHandler"
+      handler    = "app/bin/message/list"
+      file_path  = "./resources/lambda/bin/message/list.zip"
+      use_dynamo = true
+    },
+    {
+      name       = "createMessageHandler"
+      handler    = "app/bin/message/create"
+      file_path  = "./resources/lambda/bin/message/create.zip"
+      use_dynamo = true
     }
   ]
 }
@@ -101,6 +120,14 @@ variable "api_gw_methods" {
     {
       path        = "hc"
       http_method = "GET"
+    },
+    {
+      path        = "message"
+      http_method = "GET"
+    },
+    {
+      path        = "message"
+      http_method = "POST"
     }
   ]
 }

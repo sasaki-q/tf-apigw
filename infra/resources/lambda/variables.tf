@@ -18,3 +18,8 @@ variable "runtime" {
   type    = string
   default = "go1.x"
 }
+
+variable "environment" {
+  type    = map(string)
+  default = {}
+}
